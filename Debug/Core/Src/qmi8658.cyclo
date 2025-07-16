@@ -1,0 +1,9 @@
+../Core/Src/qmi8658.c:37:6:HAL_I2C_MemRxCpltCallback	1
+../Core/Src/qmi8658.c:47:22:QMI8658_ReadRegisters	1
+../Core/Src/qmi8658.c:52:22:QMI8658_WriteRegisters	1
+../Core/Src/qmi8658.c:60:22:QMI8658_ReadRegistersDMA	1
+../Core/Src/qmi8658.c:65:22:QMI8658_WriteRegistersDMA	1
+../Core/Src/qmi8658.c:73:6:QMI8658_Init	1
+../Core/Src/qmi8658.c:132:6:QMI8658_Calibration	2
+../Core/Src/qmi8658.c:164:6:QMI8658_GetInertiaData	1
+../Core/Src/qmi8658.c:190:6:QMI8658_GetInertiaData_NoCalibration	1

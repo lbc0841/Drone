@@ -1,0 +1,6 @@
+../Core/Src/e104bt52.c:10:6:E104BT52_Init	8	static
+../Core/Src/e104bt52.c:30:6:E104BT52_TranmdSetup	24	static
+../Core/Src/e104bt52.c:39:6:HAL_UARTEx_RxEventCallback	16	static
+../Core/Src/e104bt52.c:69:6:E104BT52_ReceiveMotorSpeed	4	static
+../Core/Src/e104bt52.c:82:6:E104BT52_ReceivePID	8	static
+../Core/Src/e104bt52.c:92:6:E104BT52_TransmitInertiaData	56	static
