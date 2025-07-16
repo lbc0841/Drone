@@ -43,6 +43,6 @@ typedef struct
 	float p;
 	float i;
 	float d;
-} PidK;
+} PidGain;
 
 #endif /* INC_CONSTANT_H_ */

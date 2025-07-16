@@ -20,7 +20,7 @@ void limitMotorSpeed(MotorSpeed* speed);
 
 bool enablePid(MotorSpeed speed);
 void singlePidController(Acceleration acc, AngularVelocity ang,
-		Angle currentAngle, Angle targetAngle, PidK k, MotorSpeed baseSpeed, MotorSpeed* speed);
+		Angle currentAngle, Angle targetAngle, PidGain k, MotorSpeed baseSpeed, MotorSpeed* speed);
 
 
 #endif /* INC_UTILS_H_ */

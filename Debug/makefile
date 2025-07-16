@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := DroneV2
+BUILD_ARTIFACT_NAME := Drone
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-DroneV2.elf \
+Drone.elf \
 
 MAP_FILES += \
-DroneV2.map \
+Drone.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-DroneV2.list \
+Drone.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: DroneV2.elf secondary-outputs
+main-build: Drone.elf secondary-outputs
 
 # Tool invocations
-DroneV2.elf DroneV2.map: $(OBJS) $(USER_OBJS) D:\myProject\Stm32\DroneV2\STM32F103TBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "DroneV2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"D:\myProject\Stm32\DroneV2\STM32F103TBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DroneV2.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Drone.elf Drone.map: $(OBJS) $(USER_OBJS) D:\myProject\Stm32\DroneV2\STM32F103TBUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Drone.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"D:\myProject\Stm32\DroneV2\STM32F103TBUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Drone.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-DroneV2.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "DroneV2.list"
+Drone.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "Drone.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) DroneV2.elf DroneV2.list DroneV2.map default.size.stdout
+	-$(RM) Drone.elf Drone.list Drone.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

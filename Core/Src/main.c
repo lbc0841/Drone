@@ -28,9 +28,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include <stdbool.h>
-//#include <utils.h>
-
 #include "drone_utils.h"
 #include "constant.h"
 #include "led.h"
@@ -60,18 +57,22 @@
 
 /* USER CODE BEGIN PV */
 
-int bleLinked = 0;
+volatile int isBleLinked = 0;
+volatile int loopFlag = 0;
+volatile int transmitImuData = 0;
 
-Acceleration acceleration;
-AngularVelocity angularVelocity;
+Acceleration acceleration = {0};
+AngularVelocity angularVelocity = {0};
 
-Angle currentAngle;
-Angle lastAngle;
+Angle currAngle = {0};
+Angle prevAngle = {0};
+Angle targetAngle = {0};
 
-PidK pidK;
+PidGain pidGain = {0};
 
-MotorSpeed motorBaseSpeed;
-MotorSpeed motorSpeed;
+MotorSpeed motorBaseSpeed = {0};
+MotorSpeed motorSpeed = {0};
+
 
 
 /* USER CODE END PV */
@@ -84,6 +85,15 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+//{
+//    if (htim->Instance == TIM2)
+//    {
+//        loopFlag = 1;
+//        ++transmitImuData;
+//    }
+//}
 
 /* USER CODE END 0 */
 
@@ -121,8 +131,7 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
-
-
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -133,52 +142,37 @@ int main(void)
   QMI8658_Init();
   E104BT52_Init();
   MOTOR_Init();
-
-
-  acceleration.x = 0;
-  acceleration.y = 0;
-  acceleration.z = 0;
-
-  angularVelocity.x = 0;
-  angularVelocity.y = 0;
-  angularVelocity.z = 0;
-
-  currentAngle.pitch = 0;
-  currentAngle.roll = 0;
-  currentAngle.yaw = 0;
-
-  lastAngle.pitch = 0;
-  lastAngle.roll = 0;
-  lastAngle.yaw = 0;
-
+//  HAL_TIM_Base_Start_IT(&htim2);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  // Get BLE State
-	  bleLinked = HAL_GPIO_ReadPin(BT52_LINK_GPIO_Port, BT52_LINK_Pin);
-	  LED_SetColor(bleLinked);
+  while (1){
 
-	  // Get Inertia Data
-	  QMI8658_GetInertiaData(&acceleration, &angularVelocity);
-	  inertiaData2Angle_balanceFilter(acceleration, angularVelocity, &lastAngle, &currentAngle);
-
-	  // PID
-	  Angle targetAngle;
-
-	  singlePidController(acceleration, angularVelocity, currentAngle,
-		  			  	  	  	  	  targetAngle, pidK, motorBaseSpeed, &motorSpeed);
-
-	  limitMotorSpeed(&motorSpeed);
-	  MOTOR_SetSpeed(motorSpeed);
-
-
-	  if(bleLinked)
+	  if(1)
 	  {
-		  E104BT52_TransmitInertiaData(acceleration, angularVelocity, currentAngle);
+//		  loopFlag = 0;
+
+		  // Get BLE State
+		  isBleLinked = HAL_GPIO_ReadPin(BT52_LINK_GPIO_Port, BT52_LINK_Pin);
+		  LED_SetColor(isBleLinked);
+
+		  // Get Inertia Data
+		  QMI8658_GetInertiaData(&acceleration, &angularVelocity);
+		  inertiaData2Angle_balanceFilter(acceleration, angularVelocity, &prevAngle, &currAngle);
+
+		  singlePidController(acceleration, angularVelocity, currAngle,
+		  		  			  	  	  	  	  targetAngle, pidGain, motorBaseSpeed, &motorSpeed);
+
+		  limitMotorSpeed(&motorSpeed);
+		  MOTOR_SetSpeed(motorSpeed);
+
+	  }
+	  if(isBleLinked)
+	  {
+		  transmitImuData = 0;
+		  E104BT52_TransmitInertiaData(acceleration, angularVelocity, currAngle);
 	  }
 
 	  HAL_Delay(30);

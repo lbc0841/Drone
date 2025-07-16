@@ -128,7 +128,6 @@ void QMI8658_Init()
 }
 
 
-// QMI8658_Calibration ----------------------------------------------------------------------------------
 void QMI8658_Calibration(int avgTime)
 {
 	Acceleration accTemp;
@@ -156,11 +155,9 @@ void QMI8658_Calibration(int avgTime)
 	angCalibrationValue.x = angSum.x/AVERAGE_TIME;
 	angCalibrationValue.y = angSum.y/AVERAGE_TIME;
 	angCalibrationValue.z = angSum.z/AVERAGE_TIME;
-
 }
 
 
-// QMI8658_HandleInertiaData --------------------------------------------------------------------------------
 void QMI8658_GetInertiaData(Acceleration* acc, AngularVelocity* ang)
 {
 	uint8_t data[12];
@@ -185,7 +182,6 @@ void QMI8658_GetInertiaData(Acceleration* acc, AngularVelocity* ang)
 	ang->z = uint2int_16bit(gz)*scaleFactor_ang - angCalibrationValue.z;
 
 }
-
 
 void QMI8658_GetInertiaData_NoCalibration(Acceleration* acc, AngularVelocity* ang)
 {

@@ -11,7 +11,7 @@ extern DMA_HandleTypeDef hdma_usart2_tx;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
 extern MotorSpeed motorBaseSpeed;
-extern PidK pidK;;
+extern PidGain pidGain;
 
 void E104BT52_Init();
 void E104BT52_TranmdSetup();

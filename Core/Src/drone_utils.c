@@ -7,10 +7,7 @@ Angle p, i, d;
 
 
 
-// Conversion Functions ---------------------------------------------------------------------------------
-
-// Converts 16-bit unsigned integer to signed integer
-// Handles two's complement for negative values
+// Conversion Functions
 int uint2int_16bit(uint16_t input)
 {
 	int output = input;
@@ -23,14 +20,11 @@ int uint2int_16bit(uint16_t input)
 	return output;
 }
 
-// Converts signed integer to 16-bit unsigned integer
 uint16_t int2uint_16bit(int input)
 {
 	return (uint16_t)input;
 }
 
-// Converts 8-bit unsigned integer to signed integer
-// Handles two's complement for negative values
 int uint2int_8bit(uint8_t input)
 {
 	int output = input;
@@ -43,24 +37,18 @@ int uint2int_8bit(uint8_t input)
 	return output;
 }
 
-// Converts signed integer to 8-bit unsigned integer
 uint8_t int2uint_8bit(int input)
 {
 	return (uint8_t)input;
 }
 
-// Inertia Data to Angle Conversion ---------------------------------------------------------------------
-
-// Calculates pitch and roll angles from acceleration data without filtering
-// Uses atan to compute angles based on gravitational components
+// Inertia Data to Angle
 void inertiaData2Angle_noFilter(Acceleration acc, AngularVelocity ang, Angle* angle)
 {
     angle->pitch = atan(acc.x / sqrt(pow(acc.y, 2) + pow(acc.z, 2)));
     angle->roll  = atan(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2)));
 }
 
-// Balance filter combining accelerometer and gyroscope data
-// Uses complementary filter approach with weighting factor k
 void inertiaData2Angle_balanceFilter(Acceleration acc, AngularVelocity ang,
                                     Angle* lastAngle, Angle* currentAngle)
 {
@@ -86,9 +74,7 @@ void inertiaData2Angle_balanceFilter(Acceleration acc, AngularVelocity ang,
     lastAngle->roll  = currentAngle->roll;
 }
 
-// Kalman Filter Implementation --------------------------------------------------------------------------
-
-// Structure to hold Kalman filter state
+// Kalman Filter Implementation
 typedef struct {
     float q; // Process noise covariance
     float r; // Measurement noise covariance
@@ -156,9 +142,8 @@ void inertiaData2Angle_kalmanFilter(Acceleration acc, AngularVelocity ang,
 }
 
 
-// Motor Speed Limiting ----------------------------------------------------------------------------------
+// Motor Speed Limiting
 
-// Limits motor speeds to valid PWM range [0, COUNTER_PERIOD-1]
 void limitMotorSpeed(MotorSpeed* speed)
 {
     // Front Left
@@ -178,9 +163,7 @@ void limitMotorSpeed(MotorSpeed* speed)
     else if (speed->br < 0) speed->br = 0;
 }
 
-// PID Controller ---------------------------------------------------------------------------------------
-
-// Checks if PID should be enabled based on minimum motor speed threshold
+// PID Controller
 bool enablePid(MotorSpeed speed)
 {
 //    return speed.fr > 256 &&
@@ -191,11 +174,10 @@ bool enablePid(MotorSpeed speed)
     return true;
 }
 
-
 // Single PID controller for drone stabilization
 float i_max = 160;
 void singlePidController(Acceleration acc, AngularVelocity ang,
-                         Angle currentAngle, Angle targetAngle, PidK k,
+                         Angle currentAngle, Angle targetAngle, PidGain pidGain,
                          MotorSpeed baseSpeed, MotorSpeed* speed)
 {
     Angle error;
@@ -219,9 +201,9 @@ void singlePidController(Acceleration acc, AngularVelocity ang,
 
     // Calculate PID outputs
     Pid pid;
-//    pid.pitch = -(k.p * p.pitch + k.i * i.pitch + k.d * d.pitch);
+//    pid.pitch = -(pidGain.p * p.pitch + pidGain.i * i.pitch + pidGain.d * d.pitch);
 
-    pid.roll  = -(k.p * p.roll  + k.i * i.roll  + k.d * d.roll);
+    pid.roll  = -(pidGain.p * p.roll  + pidGain.i * i.roll  + pidGain.d * d.roll);
     pid.pitch = 0;
     pid.yaw = 0; // Yaw control not implemented
 
