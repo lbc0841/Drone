@@ -60,7 +60,7 @@ Roll F: Roll (小數部分)
 
 ## 接收 LPS22HB 數值
 
-LPS22HB 目前僅裝飾用途
+LPS22HB 目前僅觀賞用途
 
 ## 設置 PID 增益
 

@@ -86,14 +86,14 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-//{
-//    if (htim->Instance == TIM2)
-//    {
-//        loopFlag = 1;
-//        ++transmitImuData;
-//    }
-//}
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM2)
+    {
+        loopFlag = 1;
+        ++transmitImuData;
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -142,7 +142,7 @@ int main(void)
   QMI8658_Init();
   E104BT52_Init();
   MOTOR_Init();
-//  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start_IT(&htim2);
 
   /* USER CODE END 2 */
 
@@ -150,9 +150,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1){
 
-	  if(1)
+	  if(loopFlag)
 	  {
-//		  loopFlag = 0;
+		  loopFlag = 0;
 
 		  // Get BLE State
 		  isBleLinked = HAL_GPIO_ReadPin(BT52_LINK_GPIO_Port, BT52_LINK_Pin);
@@ -169,13 +169,11 @@ int main(void)
 		  MOTOR_SetSpeed(motorSpeed);
 
 	  }
-	  if(isBleLinked)
+	  if(isBleLinked && transmitImuData>20)
 	  {
 		  transmitImuData = 0;
 		  E104BT52_TransmitInertiaData(acceleration, angularVelocity, currAngle);
 	  }
-
-	  HAL_Delay(30);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
