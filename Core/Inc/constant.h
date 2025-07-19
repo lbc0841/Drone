@@ -4,31 +4,24 @@
 // Struct -----------------------------------------------------------------------------------------------
 typedef struct
 {
-	float x;
-	float y;
-	float z;
+	double x;
+	double y;
+	double z;
 } Acceleration;
 
 typedef struct
 {
-	float x;
-	float y;
-	float z;
+	double x;
+	double y;
+	double z;
 } AngularVelocity;
 
 typedef struct
 {
-	float pitch;
-	float roll;
-	float yaw;
+	double pitch;
+	double roll;
+	double yaw;
 } Angle;
-
-typedef struct
-{
-	float pitch;
-	float roll;
-	float yaw;
-} Pid;
 
 typedef struct
 {
@@ -40,9 +33,23 @@ typedef struct
 
 typedef struct
 {
-	float p;
-	float i;
-	float d;
+	double p;
+	double i;
+	double d;
 } PidGain;
+
+typedef struct
+{
+    Angle p;
+	Angle i;
+	Angle d;
+} PidState;
+
+typedef struct
+{
+	double pitch;
+	double roll;
+	double yaw;
+} Pid;
 
 #endif /* INC_CONSTANT_H_ */

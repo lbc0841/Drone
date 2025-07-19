@@ -3,7 +3,7 @@
 
 #include "gpio.h"
 
-void LED_SetColor(int bleState);
+void LED_SetColor(int bleState, int deviceError);
 void LED_OffALL();
 
 

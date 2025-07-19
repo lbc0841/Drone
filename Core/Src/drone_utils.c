@@ -3,9 +3,6 @@
 // PWM
 #define COUNTER_PERIOD 1024
 
-Angle p, i, d;
-
-
 
 // Conversion Functions
 int uint2int_16bit(uint16_t input)
@@ -42,6 +39,22 @@ uint8_t int2uint_8bit(int input)
 	return (uint8_t)input;
 }
 
+int IsDeviceError(Angle currAngle, Angle targetAngle, PidGain pidGain, PidState pidState)
+{
+	if (isnan(currAngle.pitch) || isnan(currAngle.roll) || isnan(currAngle.yaw) ||
+		isnan(targetAngle.pitch) || isnan(targetAngle.roll) || isnan(targetAngle.yaw) ||
+		isnan(pidGain.p) || isnan(pidGain.i) || isnan(pidGain.d) ||
+		isnan(pidState.p.pitch) || isnan(pidState.p.roll) || isnan(pidState.p.yaw) ||
+		isnan(pidState.i.pitch) || isnan(pidState.i.roll) || isnan(pidState.i.yaw) ||
+		isnan(pidState.d.pitch) || isnan(pidState.d.roll) || isnan(pidState.d.yaw))
+	{
+	    return 1;
+	}
+
+	return 0;
+}
+
+
 // Inertia Data to Angle
 void inertiaData2Angle_noFilter(Acceleration acc, AngularVelocity ang, Angle* angle)
 {
@@ -49,100 +62,24 @@ void inertiaData2Angle_noFilter(Acceleration acc, AngularVelocity ang, Angle* an
     angle->roll  = atan(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2)));
 }
 
-void inertiaData2Angle_balanceFilter(Acceleration acc, AngularVelocity ang,
-                                    Angle* lastAngle, Angle* currentAngle)
+void inertiaData2Angle_balanceFilter(Acceleration acc, AngularVelocity ang, Angle* currentAngle)
 {
-    Angle angle_acc, angle_gyro;
+    Angle angle_acc = {0};
+    Angle angle_gyro = {0};
 
-    // Calculate angles from accelerometer data (in degrees)
-    angle_acc.pitch  = atanf(acc.x / sqrt(pow(acc.y, 2) + pow(acc.z, 2))) * 180 / M_PI;
-    angle_acc.roll  = atanf(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2))) * 180 / M_PI;
+    double sqrtYZ = sqrt(pow(acc.y, 2) + pow(acc.z, 2));
+    double sqrtXZ = sqrt(pow(acc.x, 2) + pow(acc.z, 2));
+    angle_acc.pitch = (sqrtYZ!=0) ? atanf(acc.x / sqrtYZ) * 180 / M_PI : 0;
+    angle_acc.roll =  (sqrtXZ!=0) ? atanf(acc.y / sqrtXZ) * 180 / M_PI : 0;
 
-    // Time step for gyroscope integration
-    float dt = 0.03; // 30ms loop time
-    // Integrate gyroscope data to get angle
-    angle_gyro.pitch = lastAngle->pitch + ang.y * dt;
-    angle_gyro.roll  = lastAngle->roll + ang.x * dt;
+    double dt = 0.01;
+    angle_gyro.pitch = currentAngle->pitch + ang.y * dt;
+    angle_gyro.roll  = currentAngle->roll + ang.x * dt;
 
-    // Complementary filter with weighting factor
-    float k = 0.3; // Accelerometer weight (30%)
+    double k = 0.3;
     currentAngle->pitch = k * angle_acc.pitch + (1 - k) * angle_gyro.pitch;
     currentAngle->roll  = k * angle_acc.roll + (1 - k) * angle_gyro.roll;
-
-    // Update last angle for next iteration
-    lastAngle->pitch = currentAngle->pitch;
-    lastAngle->roll  = currentAngle->roll;
 }
-
-// Kalman Filter Implementation
-typedef struct {
-    float q; // Process noise covariance
-    float r; // Measurement noise covariance
-    float x; // Estimated angle
-    float p; // Estimation error covariance
-    float k; // Kalman gain
-} KalmanFilter;
-
-// Initialize Kalman filter with default parameters
-void kalmanFilterInit(KalmanFilter* filter)
-{
-    filter->q = 0.0001; // Process noise
-    filter->r = 0.03;   // Measurement noise
-    filter->x = 0;      // Initial angle
-    filter->p = 1;      // Initial error covariance
-    filter->k = 0;      // Initial Kalman gain
-}
-
-// Kalman filter update for one axis
-void kalmanFilterUpdate(KalmanFilter* filter, float measurement, float rate, float dt)
-{
-    // Prediction step
-    filter->x = filter->x + dt * rate; // Predict angle using gyroscope
-    filter->p = filter->p + filter->q; // Update error covariance
-
-    // Update step
-    filter->k = filter->p / (filter->p + filter->r); // Calculate Kalman gain
-    filter->x = filter->x + filter->k * (measurement - filter->x); // Update estimate
-    filter->p = (1 - filter->k) * filter->p; // Update error covariance
-}
-
-// Kalman filter for angle calculation
-void inertiaData2Angle_kalmanFilter(Acceleration acc, AngularVelocity ang,
-                                   Angle* lastAngle, Angle* currentAngle)
-{
-    static KalmanFilter pitchFilter, rollFilter;
-    static bool initialized = false;
-
-    // Initialize filters on first call
-    if (!initialized)
-    {
-        kalmanFilterInit(&pitchFilter);
-        kalmanFilterInit(&rollFilter);
-        initialized = true;
-    }
-
-    // Calculate angles from accelerometer (in degrees)
-    float accPitch = atanf(acc.x / sqrt(pow(acc.y, 2) + pow(acc.z, 2))) * 180 / M_PI;
-    float accRoll = atanf(acc.y / sqrt(pow(acc.x, 2) + pow(acc.z, 2))) * 180 / M_PI;
-
-    // Time step
-    float dt = 0.03; // 30ms loop time
-
-    // Update Kalman filters
-    kalmanFilterUpdate(&pitchFilter, accPitch, ang.x, dt);
-    kalmanFilterUpdate(&rollFilter, accRoll, ang.y, dt);
-
-    // Set current angles
-    currentAngle->pitch = pitchFilter.x;
-    currentAngle->roll = rollFilter.x;
-
-    // Update last angle
-    lastAngle->pitch = currentAngle->pitch;
-    lastAngle->roll = currentAngle->roll;
-}
-
-
-// Motor Speed Limiting
 
 void limitMotorSpeed(MotorSpeed* speed)
 {
@@ -164,68 +101,46 @@ void limitMotorSpeed(MotorSpeed* speed)
 }
 
 // PID Controller
-bool enablePid(MotorSpeed speed)
+int enablePid(MotorSpeed speed)
 {
-//    return speed.fr > 256 &&
-//           speed.fl > 256 &&
-//           speed.br > 256 &&
-//           speed.bl > 256;
-
-    return true;
+    if(speed.fr > 100 && speed.fl > 100 && speed.br > 100 && speed.bl > 100) return 1;
+    else return 0;
 }
 
 // Single PID controller for drone stabilization
 float i_max = 160;
-void singlePidController(Acceleration acc, AngularVelocity ang,
-                         Angle currentAngle, Angle targetAngle, PidGain pidGain,
+void singlePidController(AngularVelocity ang, Angle currentAngle, Angle targetAngle, PidGain pidGain, PidState* pidState,
                          MotorSpeed baseSpeed, MotorSpeed* speed)
 {
-    Angle error;
-
-    // Calculate angle errors
+    Angle error = {0};
     error.pitch = targetAngle.pitch - currentAngle.pitch;
     error.roll  = targetAngle.roll  - currentAngle.roll;
 
-    // Update PID terms
-    p.pitch =  error.pitch;
-    i.pitch += error.pitch;
-    d.pitch =  0 - ang.y; // Gyro rate as derivative term
-    if (i.pitch > i_max)  i.pitch = i_max;
-    if (i.pitch < -i_max) i.pitch = -i_max;
+//    p.pitch =  error.pitch;
+//    i.pitch += error.pitch;
+//    d.pitch =  0 - ang.y;
+//    if (i.pitch > i_max)  i.pitch = i_max;
+//    if (i.pitch < -i_max) i.pitch = -i_max;
 
-    p.roll =  error.roll;
-    i.roll += error.roll;
-    d.roll =  0 - ang.x; // Gyro rate as derivative term
-    if (i.roll > i_max)  i.roll = i_max;
-    if (i.roll < -i_max) i.roll = -i_max;
+    pidState->p.roll =  error.roll;
+    pidState->i.roll += error.roll;
+    pidState->d.roll =  0 - ang.x;
+    if (pidState->i.roll > i_max)  pidState->i.roll = i_max;
+    if (pidState->i.roll < -i_max) pidState->i.roll = -i_max;
 
-    // Calculate PID outputs
-    Pid pid;
+    // calculate PID
+    Pid pid = {0};
 //    pid.pitch = -(pidGain.p * p.pitch + pidGain.i * i.pitch + pidGain.d * d.pitch);
-
-    pid.roll  = -(pidGain.p * p.roll  + pidGain.i * i.roll  + pidGain.d * d.roll);
-    pid.pitch = 0;
-    pid.yaw = 0; // Yaw control not implemented
-
+//    pid.roll = -(pidGain.p * pidState->p.roll  + pidGain.i * pidState->i.roll  + pidGain.d * pidState->d.roll);
+    pid.roll = 0 * pidState->p.roll;
     // Apply PID corrections
-    if (enablePid(baseSpeed))
-    {
-//        speed->fl = baseSpeed.fl + pid.pitch - pid.roll + pid.yaw;
-//        speed->fr = baseSpeed.fr + pid.pitch + pid.roll + pid.yaw;
-//        speed->bl = baseSpeed.bl - pid.pitch - pid.roll + pid.yaw;
-//        speed->br = baseSpeed.br - pid.pitch + pid.roll + pid.yaw;
+//    speed->fl = baseSpeed.fl + pid.pitch - pid.roll - pid.yaw;
+//    speed->fr = baseSpeed.fr + pid.pitch + pid.roll + pid.yaw;
+//    speed->bl = baseSpeed.bl - pid.pitch - pid.roll + pid.yaw;
+//    speed->br = baseSpeed.br - pid.pitch + pid.roll - pid.yaw;
 
-        speed->fl = baseSpeed.fl - pid.roll;
-        speed->fr = baseSpeed.fr + pid.roll;
-        speed->bl = baseSpeed.bl - pid.roll;
-        speed->br = baseSpeed.br + pid.roll;
-    }
-    else
-    {
-        // Maintain base speeds if PID not enabled
-        speed->fl = baseSpeed.fl;
-        speed->fr = baseSpeed.fr;
-        speed->bl = baseSpeed.bl;
-        speed->br = baseSpeed.br;
-    }
+    speed->fl = baseSpeed.fl + pid.roll;
+    speed->fr = baseSpeed.fr;
+    speed->bl = baseSpeed.bl;
+    speed->br = baseSpeed.br;
 }

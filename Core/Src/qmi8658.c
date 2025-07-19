@@ -1,7 +1,7 @@
 #include "qmi8658.h"
 
 // SDO/SA0 = VDD -> QMI8658_ADDRESS = 0x6A
-#define QMI8658_ADDRESS 0x6A << 1
+#define QMI8658_ADDRESS (0x6A << 1)
 
 
 // Setup and Control Registers --------------------------------------------------------------------------
@@ -20,30 +20,32 @@
 #define AX_L 0x35
 #define GX_L 0x3B
 
-// Calibration ------------------------------------------------------------------------------------------
-#define AVERAGE_TIME 20
 
-
-// Calibration Definitions ------------------------------------------------------------------------------
-#define AVERAGE_TIME 20
+uint8_t imuData[12] = {0};
 
 // Calibration variables
-AngularVelocity angCalibrationValue;
+AngularVelocity angCalibration = {0};
 double scaleFactor_acc = 0;
 double scaleFactor_ang = 0;
 
 
-// I2C Callback -----------------------------------------------------------------------------------------
+// I2C Callback
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	if(hi2c != &hi2c1) return;
-//	QMI8658_HandleInertiaData(inertiaData, &acceleration, &angularVelocity);
+
+	QMI8658_HandleImuData();
+
+	if (HAL_I2C_GetState(&hi2c1) == HAL_I2C_STATE_READY)
+	{
+		HAL_StatusTypeDef status = QMI8658_ReadRegisters_IT(AX_L, imuData, 12);
+		if (status != HAL_OK) deviceError = 1;
+	}
+	else deviceError = 1;
 }
 
 
-// Read/Write Registers ---------------------------------------------------------------------------------
-
-// Polling
+// Read/Write Registers
 HAL_I2C_StateTypeDef QMI8658_ReadRegisters(uint8_t memAddress, uint8_t* data, int size)
 {
 	return HAL_I2C_Mem_Read(
@@ -56,20 +58,13 @@ HAL_I2C_StateTypeDef QMI8658_WriteRegisters(uint8_t memAddress, uint8_t data)
 			&hi2c1, QMI8658_ADDRESS, memAddress, I2C_MEMADD_SIZE_8BIT, &data, size, HAL_MAX_DELAY);
 }
 
-// DMA
-HAL_I2C_StateTypeDef QMI8658_ReadRegistersDMA(uint8_t memAddress, uint8_t* data, int size)
+HAL_I2C_StateTypeDef QMI8658_ReadRegisters_IT(uint8_t memAddress, uint8_t* data, int size)
 {
-	return HAL_I2C_Mem_Read_DMA(
+	return HAL_I2C_Mem_Read_IT(
 			&hi2c1, QMI8658_ADDRESS, memAddress, I2C_MEMADD_SIZE_8BIT, data, size);
 }
-HAL_I2C_StateTypeDef QMI8658_WriteRegistersDMA(uint8_t memAddress, uint8_t data)
-{
-	uint8_t size = 1;
-	return HAL_I2C_Mem_Write_DMA(
-			&hi2c1, QMI8658_ADDRESS, memAddress, I2C_MEMADD_SIZE_8BIT, &data, size);
-}
 
-// QMI8658_Init -----------------------------------------------------------------------------------------
+
 void QMI8658_Init()
 {
 	/* CTRL1 :
@@ -119,91 +114,61 @@ void QMI8658_Init()
 	HAL_Delay(10);
 
 
-//	QMI8658_WriteRegisters(CTRL8, 0x00);
-//	QMI8658_WriteRegisters(CTRL9, 0x00);
-
-
 	HAL_Delay(30);
-	QMI8658_Calibration(AVERAGE_TIME);
+	QMI8658_Calibration();
 }
 
 
-void QMI8658_Calibration(int avgTime)
+#define CAL_AVG_TIME 20
+void QMI8658_Calibration()
 {
-	Acceleration accTemp;
-	AngularVelocity angTemp;
-
-	Acceleration accSum;
 	AngularVelocity angSum;
 
-	for(int i=0; i<AVERAGE_TIME; i++)
+	for(int i=0; i<CAL_AVG_TIME; i++)
 	{
-		QMI8658_GetInertiaData_NoCalibration(&accTemp, &angTemp);
+		QMI8658_ReadRegisters(AX_L, imuData, 12);
 
+		uint16_t gx = (( uint16_t) imuData[7] ) << 8 | imuData[6];
+		uint16_t gy = (( uint16_t) imuData[9] ) << 8 | imuData[8];
+		uint16_t gz = (( uint16_t) imuData[11]) << 8 | imuData[10];
 
-		accSum.x += accTemp.x;
-		accSum.y += accTemp.y;
-		accSum.z += (accTemp.z-9.81);
-
-		angSum.x += angTemp.x;
-		angSum.y += angTemp.y;
-		angSum.z += angTemp.z;
+		angSum.x += uint2int_16bit(gx)*scaleFactor_ang;
+		angSum.y += uint2int_16bit(gy)*scaleFactor_ang;
+		angSum.z += uint2int_16bit(gz)*scaleFactor_ang;
 
 		HAL_Delay(10);
 	}
 
-	angCalibrationValue.x = angSum.x/AVERAGE_TIME;
-	angCalibrationValue.y = angSum.y/AVERAGE_TIME;
-	angCalibrationValue.z = angSum.z/AVERAGE_TIME;
+	angCalibration.x = angSum.x/CAL_AVG_TIME;
+	angCalibration.y = angSum.y/CAL_AVG_TIME;
+	angCalibration.z = angSum.z/CAL_AVG_TIME;
 }
 
-
-void QMI8658_GetInertiaData(Acceleration* acc, AngularVelocity* ang)
+void QMI8658_StartReadImuData()
 {
-	uint8_t data[12];
-	QMI8658_ReadRegisters(AX_L, data, 12);
-
-	// Merge lower 8 bits & upper 8 bits
-	uint16_t ax = (( uint16_t) data[1]) << 8 | data[0];
-	uint16_t ay = (( uint16_t) data[3]) << 8 | data[2];
-	uint16_t az = (( uint16_t) data[5]) << 8 | data[4];
-
-	uint16_t gx = (( uint16_t) data[7] ) << 8 | data[6];
-	uint16_t gy = (( uint16_t) data[9] ) << 8 | data[8];
-	uint16_t gz = (( uint16_t) data[11]) << 8 | data[10];
-
-
-	acc->x = uint2int_16bit(ax)*scaleFactor_acc;
-	acc->y = uint2int_16bit(ay)*scaleFactor_acc;
-	acc->z = uint2int_16bit(az)*scaleFactor_acc;
-
-	ang->x = uint2int_16bit(gx)*scaleFactor_ang - angCalibrationValue.x;
-	ang->y = uint2int_16bit(gy)*scaleFactor_ang - angCalibrationValue.y;
-	ang->z = uint2int_16bit(gz)*scaleFactor_ang - angCalibrationValue.z;
-
+	HAL_StatusTypeDef status = QMI8658_ReadRegisters_IT(AX_L, imuData, 12);
+	if (status != HAL_OK) deviceError = 1;
 }
 
-void QMI8658_GetInertiaData_NoCalibration(Acceleration* acc, AngularVelocity* ang)
+void QMI8658_HandleImuData()
 {
-	uint8_t data[12];
-	QMI8658_ReadRegisters(AX_L, data, 12);
+	// merge lower 8 bits & upper 8 bits
+	uint16_t ax = (( uint16_t) imuData[1]) << 8 | imuData[0];
+	uint16_t ay = (( uint16_t) imuData[3]) << 8 | imuData[2];
+	uint16_t az = (( uint16_t) imuData[5]) << 8 | imuData[4];
 
-	// Merge lower 8 bits & upper 8 bits
-	uint16_t ax = (( uint16_t) data[1]) << 8 | data[0];
-	uint16_t ay = (( uint16_t) data[3]) << 8 | data[2];
-	uint16_t az = (( uint16_t) data[5]) << 8 | data[4];
+	uint16_t gx = (( uint16_t) imuData[7] ) << 8 | imuData[6];
+	uint16_t gy = (( uint16_t) imuData[9] ) << 8 | imuData[8];
+	uint16_t gz = (( uint16_t) imuData[11]) << 8 | imuData[10];
 
-	uint16_t gx = (( uint16_t) data[7] ) << 8 | data[6];
-	uint16_t gy = (( uint16_t) data[9] ) << 8 | data[8];
-	uint16_t gz = (( uint16_t) data[11]) << 8 | data[10];
+	// calculate acceleration & angularVelocity
+	acceleration.x = uint2int_16bit(ax)*scaleFactor_acc;
+	acceleration.y = uint2int_16bit(ay)*scaleFactor_acc;
+	acceleration.z = uint2int_16bit(az)*scaleFactor_acc;
 
-	acc->x = uint2int_16bit(ax)*scaleFactor_acc;
-	acc->y = uint2int_16bit(ay)*scaleFactor_acc;
-	acc->z = uint2int_16bit(az)*scaleFactor_acc;
-
-	ang->x = uint2int_16bit(gx)*scaleFactor_ang;
-	ang->y = uint2int_16bit(gy)*scaleFactor_ang;
-	ang->z = uint2int_16bit(gz)*scaleFactor_ang;
+	angularVelocity.x = uint2int_16bit(gx)*scaleFactor_ang - angCalibration.x;
+	angularVelocity.y = uint2int_16bit(gy)*scaleFactor_ang - angCalibration.y;
+	angularVelocity.z = uint2int_16bit(gz)*scaleFactor_ang - angCalibration.z;
 }
 
 

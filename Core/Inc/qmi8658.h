@@ -8,11 +8,16 @@
 extern Acceleration acceleration;
 extern AngularVelocity angularVelocity;
 
-void QMI8658_Init();
-void QMI8658_Calibration(int avgTime);
+extern volatile int deviceError;
 
-void QMI8658_GetInertiaData(Acceleration* acc, AngularVelocity* ang);
-void QMI8658_GetInertiaData_NoCalibration(Acceleration* acc, AngularVelocity* ang);
+HAL_I2C_StateTypeDef QMI8658_ReadRegisters(uint8_t memAddress, uint8_t* data, int size);
+HAL_I2C_StateTypeDef QMI8658_WriteRegisters(uint8_t memAddress, uint8_t data);
+HAL_I2C_StateTypeDef QMI8658_ReadRegisters_IT(uint8_t memAddress, uint8_t* data, int size);
+
+void QMI8658_Init();
+void QMI8658_Calibration();
+void QMI8658_StartReadImuData();
+void QMI8658_HandleImuData();
 
 
 #endif /* INC_QMI8658_H_ */

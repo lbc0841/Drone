@@ -58,6 +58,7 @@
 /* USER CODE BEGIN PV */
 
 volatile int isBleLinked = 0;
+volatile int deviceError = 0;
 volatile int loopFlag = 0;
 volatile int transmitImuData = 0;
 
@@ -65,10 +66,10 @@ Acceleration acceleration = {0};
 AngularVelocity angularVelocity = {0};
 
 Angle currAngle = {0};
-Angle prevAngle = {0};
 Angle targetAngle = {0};
 
 PidGain pidGain = {0};
+PidState pidState = {0};
 
 MotorSpeed motorBaseSpeed = {0};
 MotorSpeed motorSpeed = {0};
@@ -144,6 +145,8 @@ int main(void)
   MOTOR_Init();
   HAL_TIM_Base_Start_IT(&htim2);
 
+  QMI8658_StartReadImuData();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -156,18 +159,23 @@ int main(void)
 
 		  // Get BLE State
 		  isBleLinked = HAL_GPIO_ReadPin(BT52_LINK_GPIO_Port, BT52_LINK_Pin);
-		  LED_SetColor(isBleLinked);
+		  LED_SetColor(isBleLinked, deviceError);
 
-		  // Get Inertia Data
-		  QMI8658_GetInertiaData(&acceleration, &angularVelocity);
-		  inertiaData2Angle_balanceFilter(acceleration, angularVelocity, &prevAngle, &currAngle);
+		  inertiaData2Angle_balanceFilter(acceleration, angularVelocity, &currAngle);
 
-		  singlePidController(acceleration, angularVelocity, currAngle,
-		  		  			  	  	  	  	  targetAngle, pidGain, motorBaseSpeed, &motorSpeed);
+		  if(enablePid(motorBaseSpeed))
+		  {
+			  singlePidController(angularVelocity, currAngle, targetAngle, pidGain, &pidState, motorBaseSpeed, &motorSpeed);
 
-		  limitMotorSpeed(&motorSpeed);
-		  MOTOR_SetSpeed(motorSpeed);
+			  limitMotorSpeed(&motorSpeed);
+			  MOTOR_SetSpeed(motorSpeed);
+		  }
+		  else
+		  {
+			  MOTOR_SetSpeed(motorBaseSpeed);
+		  }
 
+//		  if(IsDeviceError(currAngle, targetAngle, pidGain, pidState)) deviceError = 1;
 	  }
 	  if(isBleLinked && transmitImuData>20)
 	  {

@@ -48,11 +48,16 @@ void E104BT52_ReceiveMotorSpeed()
     motorBaseSpeed.br = receiveData[5] * 7;
 }
 
+
+#define P_SCALER 0.06
+#define I_SCALER 0.004
+#define D_SCALER 0.04
+
 void E104BT52_ReceivePID()
 {
-	pidGain.p = receiveData[2] * 0.04;
-	pidGain.i = receiveData[3] * 0.003;
-	pidGain.d = receiveData[4] * 0.02;
+	pidGain.p = receiveData[2] * P_SCALER;
+	pidGain.i = receiveData[3] * I_SCALER;
+	pidGain.d = receiveData[4] * D_SCALER;
 }
 
 

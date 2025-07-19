@@ -1,9 +1,8 @@
-../Core/Src/qmi8658.c:37:6:HAL_I2C_MemRxCpltCallback	16	static
-../Core/Src/qmi8658.c:47:22:QMI8658_ReadRegisters	40	static
-../Core/Src/qmi8658.c:52:22:QMI8658_WriteRegisters	40	static
-../Core/Src/qmi8658.c:60:22:QMI8658_ReadRegistersDMA	32	static
-../Core/Src/qmi8658.c:65:22:QMI8658_WriteRegistersDMA	32	static
-../Core/Src/qmi8658.c:73:6:QMI8658_Init	8	static
-../Core/Src/qmi8658.c:131:6:QMI8658_Calibration	80	static
-../Core/Src/qmi8658.c:161:6:QMI8658_GetInertiaData	48	static
-../Core/Src/qmi8658.c:186:6:QMI8658_GetInertiaData_NoCalibration	40	static
+../Core/Src/qmi8658.c:33:6:HAL_I2C_MemRxCpltCallback	24	static
+../Core/Src/qmi8658.c:49:22:QMI8658_ReadRegisters	40	static
+../Core/Src/qmi8658.c:54:22:QMI8658_WriteRegisters	40	static
+../Core/Src/qmi8658.c:61:22:QMI8658_ReadRegisters_IT	32	static
+../Core/Src/qmi8658.c:68:6:QMI8658_Init	8	static
+../Core/Src/qmi8658.c:123:6:QMI8658_Calibration	48	static
+../Core/Src/qmi8658.c:147:6:QMI8658_StartReadImuData	16	static
+../Core/Src/qmi8658.c:153:6:QMI8658_HandleImuData	24	static
